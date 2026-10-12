@@ -19,8 +19,8 @@ React 19 · TypeScript · Vite · Tailwind CSS 4 · Motion · Supabase (PostgreS
 ## Installation
 
 ```bash
-git clone https://github.com/RayaneTks/encore1dessert.git
-cd encore1dessert
+git clone https://github.com/RayaneTks/encore-un-dessert.git
+cd encore-un-dessert
 npm ci
 cp .env.example .env
 npm run dev
