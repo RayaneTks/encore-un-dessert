@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle } from 'lucide-react';
 
 interface ConfirmDialogProps {
@@ -17,7 +18,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -54,6 +55,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 };

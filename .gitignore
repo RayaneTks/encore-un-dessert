@@ -31,3 +31,8 @@ encore1dessert-rework-version/
 
 .vercel
 .env*.local
+
+# Cache / local
+.vite/
+__pycache__/
+.claude/settings.local.json

@@ -16,7 +16,7 @@ export const initialIngredients: RawIngredient[] = [
 
 export const initialBases: Base[] = [
   {
-    id: 'prep-shortcrust', name: 'Pâte sucrée', category: 'Fond', emoji: '🥧', notes: 'Base standard pour toutes les tartes', createdAt: '2026-04-01T00:00:00Z',
+    id: 'prep-shortcrust', name: 'Pâte sucrée', category: 'Fond', family: '', yieldQty: null, yieldLabel: '', emoji: '🥧', notes: 'Base standard pour toutes les tartes', createdAt: '2026-04-01T00:00:00Z',
     components: [
       { ingredientId: 'ing-flour', quantity: 250 },
       { ingredientId: 'ing-butter', quantity: 150 },
@@ -26,7 +26,7 @@ export const initialBases: Base[] = [
     ],
   },
   {
-    id: 'prep-caramel', name: 'Caramel beurre salé', category: 'Insert', emoji: '🍯', notes: 'Base maison', createdAt: '2026-04-01T00:00:00Z',
+    id: 'prep-caramel', name: 'Caramel beurre salé', category: 'Insert', family: '', yieldQty: null, yieldLabel: '', emoji: '🍯', notes: 'Base maison', createdAt: '2026-04-01T00:00:00Z',
     components: [
       { ingredientId: 'ing-sugar', quantity: 200 },
       { ingredientId: 'ing-butter', quantity: 80 },
@@ -34,7 +34,7 @@ export const initialBases: Base[] = [
     ],
   },
   {
-    id: 'prep-almond-cream', name: "Crème d'amande", category: 'Crème', emoji: '🍮', notes: '', createdAt: '2026-04-01T00:00:00Z',
+    id: 'prep-almond-cream', name: "Crème d'amande", category: 'Crème', family: '', yieldQty: null, yieldLabel: '', emoji: '🍮', notes: '', createdAt: '2026-04-01T00:00:00Z',
     components: [
       { ingredientId: 'ing-butter', quantity: 100 },
       { ingredientId: 'ing-almond-powder', quantity: 100 },

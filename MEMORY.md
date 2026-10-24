@@ -1,2 +1,0 @@
-- [Project Encore1Dessert (iOS Utility App)](memory/project_encore_utility.md) — Objectifs design / technique, règles **Ordres** (liste, dates, J+1) et **Compta** (immuabilité, pas de cascade à la suppression commande).
-- [CLAUDE.md](CLAUDE.md) — Point d’entrée code : structure `src/`, `dateLocal`, commandes, historique, bundle offers, contraintes UI.

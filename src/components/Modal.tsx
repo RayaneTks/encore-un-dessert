@@ -1,7 +1,11 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+
+/** Pile des modales ouvertes : Échap ne ferme que celle du dessus. */
+const openModals: symbol[] = [];
 
 interface ModalProps {
   title: string;
@@ -14,15 +18,23 @@ interface ModalProps {
 export const Modal: React.FC<ModalProps> = ({ title, children, onClose, footer }) => {
   const reduceMotion = usePrefersReducedMotion();
 
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
+
   React.useEffect(() => {
+    const id = Symbol('modal');
+    openModals.push(id);
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && openModals[openModals.length - 1] === id) onCloseRef.current();
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      openModals.splice(openModals.indexOf(id), 1);
+    };
+  }, []);
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: reduceMotion ? 1 : 0 }}
       animate={{ opacity: 1 }}
@@ -69,6 +81,7 @@ export const Modal: React.FC<ModalProps> = ({ title, children, onClose, footer }
           </div>
         ) : null}
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 };

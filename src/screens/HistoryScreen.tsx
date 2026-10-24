@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, ChevronDown, X, Settings, ChevronRight, RotateCcw, TrendingUp } from 'lucide-react';
+import { Trash2, ChevronDown, X, ChevronRight, RotateCcw, TrendingUp } from 'lucide-react';
 import { HistoryEntry, Commande, Tab, StatPeriod, DESSERT_PRODUCT_KIND_OPTIONS } from '../types';
 import { PageHeader } from '../components/PageHeader';
-import { IconActionButton } from '../components/IconActionButton';
 import { FilterPillRow, FilterSortByCustomer, FilterField } from '../components/FilterControls';
 import { SectionCard } from '../components/SectionCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -100,7 +99,7 @@ export const HistoryScreen: React.FC<Props> = ({
   const confirmDeleteOrderGroup = async () => {
     if (!orderGroupToDelete) return;
     await onDeleteOrderGroup(orderGroupToDelete);
-    showToast('Ticket supprimé', 'info');
+    showToast('Vente supprimée', 'info');
     setOrderGroupToDelete(null);
     setGroupOpen(null);
     setSelectedEntry(null);
@@ -126,16 +125,8 @@ export const HistoryScreen: React.FC<Props> = ({
       className="h-full overflow-y-auto scrollbar-hide px-2 pb-32"
     >
       <PageHeader
-        title="Tableau de bord"
+        title="Ventes"
         description={`${periodLabel} · ${stats.totalSales} vente${stats.totalSales > 1 ? 's' : ''}`}
-        action={
-          <IconActionButton
-            size="compact"
-            onClick={() => setActiveTab('settings')}
-            icon={<Settings size={18} strokeWidth={2} />}
-            label="Ouvrir les réglages"
-          />
-        }
       />
 
       <div className="px-4 space-y-4">
@@ -193,55 +184,28 @@ export const HistoryScreen: React.FC<Props> = ({
         {/* Hero KPI — dark card */}
         <div className="gourmand-card-dark p-6 rounded-2xl">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">Chiffre d'Affaires</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">Argent encaissé</p>
             <TrendingUp size={14} className="opacity-40 mt-0.5 shrink-0" />
           </div>
           <p className="text-4xl font-bold tracking-tight mb-4">{fmt(stats.totalRevenue)}</p>
           <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-1">Bénéfice net</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-1">Bénéfice</p>
               <p className="text-xl font-bold text-emerald-400">{fmt(stats.totalProfit)}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-1">Coût matières</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mb-1">Coût des ingrédients</p>
               <p className="text-xl font-semibold opacity-80">{fmt(stats.totalCost)}</p>
             </div>
           </div>
-        </div>
-
-        {/* KPI grid 2×2 */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="gourmand-card p-4 flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-2">Marge globale</p>
-            <p className={`text-2xl font-bold ${marginColor(stats.marginRate)}`}>{fmtPct(stats.marginRate)}</p>
-            {/* Mini barre marge */}
-            <div className="margin-bar-track mt-2">
-              <div
-                className="margin-bar-fill"
-                style={{
-                  width: `${Math.min(100, Math.max(0, stats.marginRate * 100))}%`,
-                  backgroundColor: stats.marginRate >= 0.6 ? '#16a34a' : stats.marginRate >= 0.4 ? '#f59e0b' : '#ef4444',
-                }}
-              />
-            </div>
-          </div>
-          <div className="gourmand-card p-4 flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-2">Pièces vendues</p>
-            <p className="text-2xl font-bold">{stats.totalDessertsSold}</p>
-          </div>
-          <div className="gourmand-card p-4 flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-2">Transactions</p>
-            <p className="text-2xl font-bold">{stats.totalSales}</p>
-          </div>
-          <div className="gourmand-card p-4 flex flex-col">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-2">Marge moy./vente</p>
-            <p className="text-xl font-bold">{fmt(stats.avgMarginPerSale)}</p>
-          </div>
+          <p className="mt-4 text-sm font-medium opacity-80">
+            <span className={`font-bold ${stats.marginRate >= 0.6 ? 'text-emerald-400' : stats.marginRate >= 0.4 ? 'text-amber-300' : 'text-red-300'}`}>{fmtPct(stats.marginRate)}</span> de bénéfice · {stats.totalDessertsSold} pièce{stats.totalDessertsSold > 1 ? 's' : ''} vendue{stats.totalDessertsSold > 1 ? 's' : ''}
+          </p>
         </div>
 
         {/* Top 3 */}
         {stats.top3Profit && stats.top3Profit.length > 0 && (
-          <SectionCard title="Top rentabilité">
+          <SectionCard title="Desserts les plus rentables">
             <div className="space-y-1">
               {stats.top3Profit.map((d, idx) => {
                 const medals = ['🥇', '🥈', '🥉'];
@@ -261,15 +225,15 @@ export const HistoryScreen: React.FC<Props> = ({
           </SectionCard>
         )}
 
-        {/* Transactions */}
-        <SectionCard title="Transactions" padding={false}>
+        {/* Dernières ventes */}
+        <SectionCard title="Dernières ventes" padding={false}>
           {orderGroups.length === 0 ? (
             <div className="p-12 text-center">
               <p className="font-semibold text-sm text-gourmand-chocolate mb-1">
                 {period === 'all' ? 'Aucune vente' : 'Aucune vente sur cette période'}
               </p>
               <p className="text-[11px] text-gourmand-biscuit">
-                {period !== 'all' ? 'Essaie "Tout" pour voir l\'historique complet' : 'Enregistre ta première vente dans Vendre'}
+                {period !== 'all' ? 'Touchez « Tout » pour voir toutes les ventes' : 'Faites votre première vente dans Caisse'}
               </p>
             </div>
           ) : (
@@ -385,7 +349,7 @@ export const HistoryScreen: React.FC<Props> = ({
             >
               <div className="border-b border-gourmand-border p-5 flex shrink-0 justify-between items-start gap-2">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-1">Ticket</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit mb-1">Vente</p>
                   <h3 className="text-lg font-bold tracking-tight break-words">
                     {groupOpen.sourceCommandeId
                       ? commandes.find(c => c.id === groupOpen.sourceCommandeId)?.clientName ?? 'Client'
@@ -434,7 +398,7 @@ export const HistoryScreen: React.FC<Props> = ({
               </div>
               <div className="space-y-2 border-t border-gourmand-border bg-gourmand-bg/50 p-4">
                 <div className="flex justify-between items-center text-sm mb-2">
-                  <span className="font-semibold text-gourmand-biscuit">Total ticket</span>
+                  <span className="font-semibold text-gourmand-biscuit">Total</span>
                   <div className="text-right">
                     <p className="font-bold tabular-nums">{fmt(groupOpen.totalRevenue)}</p>
                     <p className="text-xs font-bold text-emerald-600 tabular-nums">+{fmt(groupOpen.totalProfit)}</p>
@@ -445,7 +409,7 @@ export const HistoryScreen: React.FC<Props> = ({
                   onClick={() => setOrderGroupToDelete(groupOpen.groupId)}
                   className="w-full py-3.5 text-[11px] font-bold uppercase tracking-widest text-red-500 bg-red-50 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors"
                 >
-                  <Trash2 size={16} /> Supprimer ce ticket
+                  <Trash2 size={16} /> Supprimer cette vente
                 </button>
               </div>
             </motion.div>
@@ -504,7 +468,7 @@ export const HistoryScreen: React.FC<Props> = ({
                     <p className="font-bold text-base text-emerald-700 tabular-nums">{fmt(selectedEntry.totalProfit)}</p>
                   </div>
                   <div className="bg-gourmand-bg rounded-xl p-3">
-                    <p className="text-[10px] font-bold uppercase text-gourmand-biscuit mb-1">Coût matières</p>
+                    <p className="text-[10px] font-bold uppercase text-gourmand-biscuit mb-1">Coût des ingrédients</p>
                     <p className="font-bold text-sm tabular-nums">{fmt(selectedEntry.totalCost)}</p>
                   </div>
                   <div className="bg-gourmand-bg rounded-xl p-3">
@@ -532,7 +496,7 @@ export const HistoryScreen: React.FC<Props> = ({
                     onClick={() => setOrderGroupToDelete(selectedEntry.orderGroupId)}
                     className="w-full py-3.5 text-[11px] font-bold uppercase tracking-widest text-amber-900/90 bg-amber-100/80 border border-amber-200/80 rounded-xl flex items-center justify-center gap-2"
                   >
-                    <Trash2 size={16} /> Tout le ticket ({sameGroupCount(selectedEntry.orderGroupId)} lignes)
+                    <Trash2 size={16} /> Toute la vente ({sameGroupCount(selectedEntry.orderGroupId)} lignes)
                   </button>
                 )}
 
@@ -559,8 +523,8 @@ export const HistoryScreen: React.FC<Props> = ({
         )}
         {orderGroupToDelete && (
           <ConfirmDialog
-            title="Supprimer le ticket"
-            message={`Supprimer toutes les lignes de ce ticket (${sameGroupCount(orderGroupToDelete)} vente(s)) ?`}
+            title="Supprimer cette vente"
+            message={`Supprimer toute cette vente (${sameGroupCount(orderGroupToDelete)} ligne(s)) ?`}
             onConfirm={confirmDeleteOrderGroup}
             onCancel={() => setOrderGroupToDelete(null)}
           />

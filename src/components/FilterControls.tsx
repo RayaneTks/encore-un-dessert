@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 /** Tri / filtre client (liste déroulante) — Compta / Ordres */
 export const CUSTOMER_SORT_OPTIONS = [
-  { value: 'all' as const, label: 'Tout' },
+  { value: 'all' as const, label: 'Tous' },
   { value: 'particulier' as const, label: 'Particulier' },
   { value: 'pro' as const, label: 'Pro' },
 ];
@@ -126,13 +126,13 @@ export function FilterSortByCustomer({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2 pt-0.5">
-      <span className={`${filterGroupLabelClass} shrink-0`}>Trier par</span>
+      <span className={`${filterGroupLabelClass} shrink-0`}>Clients</span>
       <div className="relative ml-auto min-w-0 shrink">
         <select
           className="h-9 min-h-9 w-full min-w-[7.25rem] max-w-[11rem] cursor-pointer appearance-none rounded-lg border border-gourmand-border bg-white px-2.5 pr-8 text-sm font-semibold text-gourmand-chocolate shadow-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-gourmand-chocolate focus-visible:ring-2 focus-visible:ring-gourmand-chocolate/18"
           value={value}
           onChange={e => onChange(e.target.value as 'all' | 'particulier' | 'pro')}
-          aria-label="Trier par type de client"
+          aria-label="Filtrer par type de client"
         >
           {CUSTOMER_SORT_OPTIONS.map(o => (
             <option key={o.value} value={o.value}>

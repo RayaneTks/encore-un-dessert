@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Share, PlusSquare, Smartphone } from 'lucide-react';
+import { Share, PlusSquare } from 'lucide-react';
+import logo from '../assets/logo.webp';
 import { motion } from 'motion/react';
 
 export const InstallPrompt: React.FC = () => {
@@ -40,14 +41,12 @@ export const InstallPrompt: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         className="max-w-sm w-full bg-white rounded-3xl p-8 shadow-2xl text-center space-y-6"
       >
-        <div className="w-20 h-20 bg-gourmand-bg rounded-full flex items-center justify-center mx-auto shadow-sm">
-          <Smartphone size={40} className="text-gourmand-chocolate" />
-        </div>
+        <img src={logo} alt="Encore 1 Dessert" className="mx-auto h-auto w-56" />
         
         <div>
           <h2 className="text-2xl font-bold tracking-tight mb-2">Installez l'application</h2>
           <p className="text-sm text-gourmand-cocoa/80 leading-relaxed font-medium">
-            Pour une expérience optimale et sécurisée, Encore1Dessert doit être installé sur votre écran d'accueil.
+            Ajoutez Encore 1 Dessert à votre écran d’accueil pour l’ouvrir comme une vraie application.
           </p>
         </div>
 

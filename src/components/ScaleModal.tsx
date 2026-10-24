@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
+import { createPortal } from 'react-dom';
 import { X, Copy, Check, ChefHat, Scale } from 'lucide-react';
 import { Dessert, Base, RawIngredient } from '../types';
 import {
@@ -24,9 +25,11 @@ interface Props {
   onClose: () => void;
   /** Quantité initiale pré-remplie (ex : depuis le board cuisine) */
   initialQuantity?: number;
+  /** Bases uniquement : crée une nouvelle variante pré-remplie avec les quantités adaptées (facteur en argument). */
+  onSaveVariant?: (factor: number) => void;
 }
 
-const PRESETS = [1, 2, 3, 5, 10] as const;
+const PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
 function roundQty(n: number): string {
   if (n <= 0) return '0';
@@ -46,12 +49,11 @@ export const ScaleModal: React.FC<Props> = ({
   bases,
   onClose,
   initialQuantity,
+  onSaveVariant,
 }) => {
   const baseServings = target.type === 'dessert' ? target.item.servings : 1;
-  const initialMultiplier =
-    initialQuantity && initialQuantity > 0 && target.type === 'dessert'
-      ? initialQuantity / baseServings
-      : initialQuantity ?? 1;
+  // Une quantité commandée = autant de fois la recette du dessert (comme pour le coût à la vente et la liste de courses).
+  const initialMultiplier = initialQuantity && initialQuantity > 0 ? initialQuantity : 1;
 
   const [multiplier, setMultiplier] = useState<number>(() =>
     Math.max(0.5, Math.min(50, initialMultiplier)),
@@ -59,14 +61,28 @@ export const ScaleModal: React.FC<Props> = ({
   const [customInput, setCustomInput] = useState('');
   const [copied, setCopied] = useState(false);
 
-  /* Valeur active du multiplicateur (custom ou preset) */
+  /* Mode « par ingrédient » (bases uniquement) : on fixe la quantité d'un ingrédient, le reste suit. */
+  const baseComponents = target.type === 'base' ? target.item.components : [];
+  const [mode, setMode] = useState<'multiplier' | 'ingredient'>('multiplier');
+  const [pivotId, setPivotId] = useState<string>(baseComponents[0]?.ingredientId ?? '');
+  const [pivotInput, setPivotInput] = useState('');
+  const pivotComp = baseComponents.find(c => c.ingredientId === pivotId);
+  const pivotIng = pivotComp ? findIngredient(ingredients, pivotComp.ingredientId) : undefined;
+  const pivotUnit = pivotIng?.unit === 'u' ? 'u' : pivotIng?.unit === 'L' ? 'ml' : 'g';
+
+  /* Valeur active du multiplicateur (custom, preset ou ingrédient pivot) */
   const activeMultiplier = useMemo(() => {
+    if (mode === 'ingredient') {
+      const v = parseFloat(pivotInput.replace(',', '.'));
+      if (pivotComp && pivotComp.quantity > 0 && Number.isFinite(v) && v > 0) return v / pivotComp.quantity;
+      return 1;
+    }
     if (customInput.trim()) {
       const v = parseFloat(customInput.replace(',', '.'));
       if (Number.isFinite(v) && v > 0) return v;
     }
     return multiplier;
-  }, [multiplier, customInput]);
+  }, [mode, pivotInput, pivotComp, multiplier, customInput]);
 
   const handlePreset = useCallback(
     (v: number) => {
@@ -137,13 +153,20 @@ export const ScaleModal: React.FC<Props> = ({
       return {
         base: `${baseParts} part${baseParts > 1 ? 's' : ''} (recette de base)`,
         target: `${targetParts} part${targetParts > 1 ? 's' : ''}`,
+        yieldText: null as string | null,
       };
     } else {
       const { totalWeight: baseWeight } = calculateBaseCost(target.item, ingredients);
       const targetWeight = Math.round(baseWeight * activeMultiplier);
+      const { yieldQty, yieldLabel } = target.item;
+      const yieldText =
+        yieldQty && yieldQty > 0
+          ? `${roundQty(yieldQty * activeMultiplier)} ${yieldLabel}`.trim()
+          : null;
       return {
         base: `${baseWeight} g (recette de base)`,
         target: `${targetWeight} g`,
+        yieldText,
       };
     }
   }, [target, activeMultiplier, ingredients]);
@@ -168,9 +191,9 @@ export const ScaleModal: React.FC<Props> = ({
   }, [target, activeMultiplier, lines, totalCost]);
 
   const activePreset =
-    !customInput.trim() ? PRESETS.find(p => p === multiplier) ?? null : null;
+    mode === 'multiplier' && !customInput.trim() ? PRESETS.find(p => p === multiplier) ?? null : null;
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -220,43 +243,113 @@ export const ScaleModal: React.FC<Props> = ({
 
         {/* Sélecteur de multiplicateur */}
         <div className="shrink-0 px-5 py-4 border-b border-gourmand-border/60 space-y-3">
-          <div className="flex gap-2">
-            {PRESETS.map(p => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => handlePreset(p)}
-                className={`scale-preset-btn ${
-                  activePreset === p
-                    ? 'scale-preset-btn-active'
-                    : 'scale-preset-btn-inactive'
-                }`}
+          {target.type === 'base' && baseComponents.length > 0 && (
+            <div className="flex gap-1 rounded-xl bg-gourmand-bg p-1">
+              {([['multiplier', 'Multiplier'], ['ingredient', 'Par ingrédient']] as const).map(([m, label]) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className={`flex-1 rounded-lg py-2 text-xs font-bold transition-colors ${
+                    mode === m ? 'bg-white text-gourmand-chocolate shadow-sm' : 'text-gourmand-biscuit'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {mode === 'multiplier' ? (
+            <>
+              <div className="flex gap-2">
+                {PRESETS.map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => handlePreset(p)}
+                    className={`scale-preset-btn ${
+                      activePreset === p
+                        ? 'scale-preset-btn-active'
+                        : 'scale-preset-btn-inactive'
+                    }`}
+                  >
+                    ×{p}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gourmand-biscuit">
+                    ×
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0.1}
+                    step={0.5}
+                    value={customInput}
+                    onChange={e => handleCustomChange(e.target.value)}
+                    placeholder={String(multiplier)}
+                    className="gourmand-input w-full pl-8 text-base font-bold"
+                  />
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-[10px] font-semibold uppercase text-gourmand-biscuit">Résultat</p>
+                  <p className="text-base font-bold text-gourmand-chocolate">{headerInfo.target}</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <select
+                value={pivotId}
+                onChange={e => { setPivotId(e.target.value); setPivotInput(''); }}
+                className="gourmand-input w-full text-sm font-semibold"
+                aria-label="Ingrédient de référence"
               >
-                ×{p}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gourmand-biscuit">
-                ×
-              </span>
-              <input
-                type="number"
-                inputMode="decimal"
-                min={0.1}
-                step={0.5}
-                value={customInput}
-                onChange={e => handleCustomChange(e.target.value)}
-                placeholder={String(multiplier)}
-                className="gourmand-input w-full pl-8 text-base font-bold"
-              />
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[10px] font-semibold uppercase text-gourmand-biscuit">Résultat</p>
-              <p className="text-base font-bold text-gourmand-chocolate">{headerInfo.target}</p>
-            </div>
-          </div>
+                {baseComponents.map(c => {
+                  const ing = findIngredient(ingredients, c.ingredientId);
+                  const u = ing?.unit === 'u' ? 'u' : ing?.unit === 'L' ? 'ml' : 'g';
+                  return (
+                    <option key={c.ingredientId} value={c.ingredientId}>
+                      {ing?.emoji ?? '🥄'} {ing?.name ?? 'Inconnu'} (recette : {roundQty(c.quantity)} {u})
+                    </option>
+                  );
+                })}
+              </select>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    value={pivotInput}
+                    onChange={e => setPivotInput(e.target.value)}
+                    placeholder={pivotComp ? roundQty(pivotComp.quantity) : '0'}
+                    className="gourmand-input w-full pr-10 text-base font-bold"
+                    aria-label="Quantité disponible"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-gourmand-biscuit">
+                    {pivotUnit}
+                  </span>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-[10px] font-semibold uppercase text-gourmand-biscuit">Facteur</p>
+                  <p className="text-base font-bold text-gourmand-chocolate tabular-nums">×{roundQty(activeMultiplier)}</p>
+                </div>
+              </div>
+              <p className="text-xs text-gourmand-biscuit">
+                Indiquez ce que vous avez : le reste s’ajuste tout seul.
+              </p>
+            </>
+          )}
+
+          {headerInfo.yieldText && (
+            <p className="text-xs font-semibold text-gourmand-cocoa">
+              🍰 Rendement : <span className="text-gourmand-chocolate">{headerInfo.yieldText}</span>
+            </p>
+          )}
         </div>
 
         {/* Liste des ingrédients scalés */}
@@ -302,7 +395,7 @@ export const ScaleModal: React.FC<Props> = ({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gourmand-biscuit">
-                Coût matières
+                Coût des ingrédients
               </p>
               <p className="text-lg font-bold text-gourmand-chocolate">{fmt(totalCost)}</p>
             </div>
@@ -328,8 +421,18 @@ export const ScaleModal: React.FC<Props> = ({
               )}
             </button>
           </div>
+          {onSaveVariant && target.type === 'base' && (
+            <button
+              type="button"
+              onClick={() => onSaveVariant(activeMultiplier)}
+              className="w-full rounded-xl border border-gourmand-border bg-white px-4 py-3 text-sm font-bold text-gourmand-chocolate transition-all active:scale-95"
+            >
+              Enregistrer comme nouvelle variante
+            </button>
+          )}
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body,
   );
 };

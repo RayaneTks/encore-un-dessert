@@ -35,15 +35,18 @@ import { Toast } from './components/Toast';
 import { InstallPrompt } from './components/InstallPrompt';
 
 const CalculateScreen = lazy(() => import('./screens/CalculateScreen').then(m => ({ default: m.CalculateScreen })));
-const IngredientsScreen = lazy(() => import('./screens/IngredientsScreen').then(m => ({ default: m.IngredientsScreen })));
-const BasesScreen = lazy(() => import('./screens/BasesScreen').then(m => ({ default: m.BasesScreen })));
-const DessertsScreen = lazy(() => import('./screens/DessertsScreen').then(m => ({ default: m.DessertsScreen })));
+const AtelierScreen = lazy(() => import('./screens/AtelierScreen').then(m => ({ default: m.AtelierScreen })));
 const HistoryScreen = lazy(() => import('./screens/HistoryScreen').then(m => ({ default: m.HistoryScreen })));
 const CommandesScreen = lazy(() => import('./screens/CommandesScreen').then(m => ({ default: m.CommandesScreen })));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('calculate');
+  /** Dernière section ouverte dans l'Atelier : l'onglet y revient directement. */
+  const [lastAtelier, setLastAtelier] = useState<Tab>('desserts');
+  useEffect(() => {
+    if (activeTab === 'desserts' || activeTab === 'bases' || activeTab === 'ingredients') setLastAtelier(activeTab);
+  }, [activeTab]);
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -91,7 +94,7 @@ export default function App() {
       checkAndFireNotifications(cmds);
     } catch (err) {
       console.error('Fetch error:', err);
-      showToast('Erreur de chargement depuis Supabase', 'error');
+      showToast('Impossible de charger vos données. Vérifiez la connexion.', 'error');
     } finally {
       setLoading(false);
     }
@@ -372,10 +375,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="app-container flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-gourmand-chocolate border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="font-semibold text-gourmand-biscuit text-sm">Chargement...</p>
-        </div>
+        <img src="/logo.webp" alt="Encore 1 Dessert" className="h-auto w-[62%] max-w-[300px] animate-pulse" />
       </div>
     );
   }
@@ -391,7 +391,6 @@ export default function App() {
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="w-8 h-8 border-4 border-gourmand-chocolate border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-xs font-semibold text-gourmand-biscuit">Chargement de l'écran...</p>
               </div>
             </div>
           }
@@ -410,33 +409,21 @@ export default function App() {
                 showToast={showToast}
               />
             )}
-            {activeTab === 'desserts' && (
-              <DessertsScreen
-                key="desserts"
+            {(activeTab === 'desserts' || activeTab === 'bases' || activeTab === 'ingredients') && (
+              <AtelierScreen
+                key="atelier"
+                section={activeTab}
+                onSectionChange={setActiveTab}
                 desserts={desserts}
-                ingredients={ingredients}
-                bases={bases}
-                onSave={handleSaveDessert}
-                onDelete={handleDeleteDessert}
-                showToast={showToast}
-              />
-            )}
-            {activeTab === 'bases' && (
-              <BasesScreen
-                key="bases"
                 bases={bases}
                 ingredients={ingredients}
-                onSave={handleSaveBase}
-                onDelete={handleDeleteBase}
-                showToast={showToast}
-              />
-            )}
-            {activeTab === 'ingredients' && (
-              <IngredientsScreen
-                key="ingredients"
-                ingredients={ingredients}
-                onSave={handleSaveIngredient}
-                onDelete={handleDeleteIngredient}
+                onSaveDessert={handleSaveDessert}
+                onDeleteDessert={handleDeleteDessert}
+                onSaveBase={handleSaveBase}
+                onDeleteBase={handleDeleteBase}
+                onSaveIngredient={handleSaveIngredient}
+                onDeleteIngredient={handleDeleteIngredient}
+                targetMargin={targetMargin}
                 showToast={showToast}
               />
             )}
@@ -479,7 +466,7 @@ export default function App() {
         </Suspense>
       </div>
 
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={t => setActiveTab(t === 'desserts' ? lastAtelier : t)} />
     </div>
   );
 }

@@ -102,6 +102,9 @@ export async function fetchBases(): Promise<Base[]> {
     id: b.id,
     name: b.name,
     category: b.category,
+    family: b.family || '',
+    yieldQty: b.yield_qty != null ? Number(b.yield_qty) : null,
+    yieldLabel: b.yield_label || '',
     emoji: b.emoji,
     notes: b.notes || '',
     createdAt: b.created_at,
@@ -116,6 +119,9 @@ export async function upsertBase(base: Base): Promise<Base> {
   const payload: any = {
     name: base.name,
     category: base.category,
+    family: base.family,
+    yield_qty: base.yieldQty,
+    yield_label: base.yieldLabel,
     emoji: base.emoji,
     notes: base.notes,
   };
@@ -126,7 +132,15 @@ export async function upsertBase(base: Base): Promise<Base> {
     .upsert(payload)
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    const m = (error.message ?? '').toLowerCase();
+    if (m.includes('family') || m.includes('yield_')) {
+      throw new Error(
+        'Colonnes manquantes dans Supabase : exécutez supabase/migrations/20261004_bases_family_yield.sql',
+      );
+    }
+    throw error;
+  }
 
   const baseId = data.id;
 

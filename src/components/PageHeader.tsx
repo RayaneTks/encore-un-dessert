@@ -5,9 +5,11 @@ interface PageHeaderProps {
   title: string;
   description?: string;
   action?: React.ReactNode;
+  /** Contenu collé sous le titre (recherche, filtres) */
+  children?: React.ReactNode;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ brand, title, description, action }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ brand, title, description, action, children }) => {
   return (
     <header className="sticky top-0 z-30 bg-gourmand-bg/90 px-4 pb-5 pt-7 backdrop-blur-xl">
       <div className="flex min-w-0 items-start justify-between gap-3">
@@ -23,6 +25,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ brand, title, descriptio
 
         {action}
       </div>
+      {children}
     </header>
   );
 };

@@ -25,6 +25,12 @@ export interface Base {
   name: string;
   components: BaseComponent[];
   category: string;          // Fond, Ganache, Insert, Coulis, Crème…
+  /** Famille de recettes (ex. « Appareil à flan »). Vide = recette autonome. Les variantes d'une famille partagent ce libellé. */
+  family: string;
+  /** Rendement de la recette telle qu'écrite : quantité (ex. 5)… */
+  yieldQty: number | null;
+  /** …et ce qu'elle permet de faire (ex. « entremets Ø18 cm »). */
+  yieldLabel: string;
   emoji: string;
   notes: string;
   createdAt: string;

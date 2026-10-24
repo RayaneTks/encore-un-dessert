@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Scale,
   CheckCheck,
+  ShoppingBasket,
 } from 'lucide-react';
 import { Commande, CommandeItem, CommandeStatus, NotifyBefore, Dessert, RawIngredient, Base, ShowToastOptions, BundleOfferRule } from '../types';
 import { buildCommandeSaleAllocations } from '../lib/deliveryBundle';
@@ -24,6 +25,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { IconActionButton } from '../components/IconActionButton';
 import { FormLabel } from '../components/FormLabel';
 import { ScaleModal } from '../components/ScaleModal';
+import { ShoppingListView } from '../components/ShoppingListView';
 import { CUSTOMER_TYPE_VALIDATE_OPTIONS, FilterChipRow, FilterField, FilterPillRow, FilterSortByCustomer } from '../components/FilterControls';
 import {
   requestNotificationPermission,
@@ -67,7 +69,7 @@ interface Props {
   showToast: (msg: string, type?: 'success' | 'error' | 'info', opts?: ShowToastOptions) => void;
 }
 
-type ScreenTab = 'commandes' | 'cuisine';
+type ScreenTab = 'commandes' | 'cuisine' | 'courses';
 
 const STATUS_LABEL: Record<CommandeStatus, string> = {
   pending: 'En attente',
@@ -120,6 +122,19 @@ function urgencyBadge(deliveryDate: string, status: CommandeStatus): { label: st
   if (diff === 0) return { label: "Aujourd'hui", cls: 'bg-orange-100 text-orange-600' };
   if (diff === 1) return { label: 'Demain', cls: 'bg-amber-100 text-amber-600' };
   return null;
+}
+
+/** Regroupe la liste par échéance : on voit d'un coup d'œil ce qui est urgent. */
+function dayBucket(deliveryDate: string, status: CommandeStatus): string {
+  if (status === 'delivered') return 'Livrées';
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.floor((new Date(deliveryDate + 'T12:00:00').getTime() - today.getTime()) / 86400000);
+  if (diff < 0) return 'En retard';
+  if (diff === 0) return "Aujourd'hui";
+  if (diff === 1) return 'Demain';
+  if (diff <= 7) return 'Cette semaine';
+  return 'Plus tard';
 }
 
 function formatDate(iso: string) {
@@ -276,6 +291,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
   const [formOpen, setFormOpen] = useState(false);
   const [detailCommand, setDetailCommand] = useState<Commande | null>(null);
   /** Panneau « Options & détail » dans le modal commande (replié par défaut). */
+  const [formMoreOpen, setFormMoreOpen] = useState(false);
   const [detailMoreOpen, setDetailMoreOpen] = useState(false);
   /** Ligne desserts nouvellement ajoutée (flash visuel). */
   const [detailHighlightLineIdx, setDetailHighlightLineIdx] = useState<number | null>(null);
@@ -333,6 +349,22 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
       return a.deliveryDate.localeCompare(b.deliveryDate);
     });
   }, [commandesPourOrdres, filter, customerFilterOrdres]);
+
+  const hasBothTypes = useMemo(
+    () => new Set(commandesPourOrdres.map(c => c.customerType)).size > 1,
+    [commandesPourOrdres],
+  );
+
+  const groups = useMemo(() => {
+    const out: { label: string; items: Commande[] }[] = [];
+    for (const c of filtered) {
+      const label = dayBucket(c.deliveryDate, c.status);
+      const last = out[out.length - 1];
+      if (last && last.label === label) last.items.push(c);
+      else out.push({ label, items: [c] });
+    }
+    return out;
+  }, [filtered]);
 
   const pendingCount = useMemo(
     () => commandesPourOrdres.filter(c => c.status === 'pending').length,
@@ -681,12 +713,11 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
     >
       <div className="shrink-0">
         <PageHeader
-          brand="Gestion"
-          title="Ordres"
+          title="Commandes"
           description={
             orderedKitchen > 0
-              ? `${pendingCount} attente · ${commandesPourOrdres.length} sur Ordres · ${remainingKitchen} restant cuisine`
-              : `${pendingCount} attente · ${commandesPourOrdres.length} sur Ordres`
+              ? `${pendingCount} à préparer · ${remainingKitchen} dessert${remainingKitchen > 1 ? 's' : ''} à faire`
+              : `${pendingCount} à préparer`
           }
           action={
             <IconActionButton
@@ -698,29 +729,27 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
           }
         />
 
-        <div className="px-4 pb-3 flex gap-2">
+        <div className="px-4 pb-3 flex gap-1.5">
           <button
             type="button"
             onClick={() => setScreenTab('commandes')}
-            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 px-2 text-sm font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
+            className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl py-3 px-1 text-[13px] font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
               screenTab === 'commandes'
                 ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
                 : 'bg-white text-gourmand-cocoa border-gourmand-border'
             }`}
           >
-            <ClipboardList size={18} className="shrink-0" aria-hidden />
             <span className="truncate">Commandes</span>
           </button>
           <button
             type="button"
             onClick={() => setScreenTab('cuisine')}
-            className={`flex flex-1 min-w-0 items-center justify-center gap-2 rounded-xl py-3 pl-2 pr-3 text-sm font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
+            className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl py-3 px-1 text-[13px] font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
               screenTab === 'cuisine'
                 ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
                 : 'bg-white text-gourmand-cocoa border-gourmand-border'
             }`}
           >
-            <ChefHat size={18} className="shrink-0" aria-hidden />
             <span className="truncate">Cuisine</span>
             {remainingKitchen > 0 && (
               <span
@@ -732,10 +761,25 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setScreenTab('courses')}
+            className={`flex flex-1 min-w-0 items-center justify-center gap-1.5 rounded-xl py-3 px-1 text-[13px] font-semibold transition-all duration-200 ease-out cursor-pointer border active:scale-[0.98] ${
+              screenTab === 'courses'
+                ? 'bg-gourmand-chocolate text-white border-gourmand-chocolate'
+                : 'bg-white text-gourmand-cocoa border-gourmand-border'
+            }`}
+          >
+            <span className="truncate">Courses</span>
+          </button>
         </div>
       </div>
 
       <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide px-2 pb-32">
+        {screenTab === 'courses' && (
+          <ShoppingListView commandes={commandes} desserts={desserts} bases={bases} ingredients={ingredients} showToast={showToast} />
+        )}
+
         {screenTab === 'commandes' && (
           <motion.div
             key="commandes-tab"
@@ -747,7 +791,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
             <div className="px-2 pb-2 space-y-3">
               <FilterField
                 label="Statut"
-                footer={<FilterSortByCustomer value={customerFilterOrdres} onChange={setCustomerFilterOrdres} />}
+                footer={hasBothTypes ? <FilterSortByCustomer value={customerFilterOrdres} onChange={setCustomerFilterOrdres} /> : undefined}
               >
                 <FilterPillRow
                   options={[
@@ -777,25 +821,30 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               </div>
             )}
             {notifPerm === 'denied' && (
-              <div className="mx-2 mb-3 p-3 rounded-2xl bg-red-50 border border-red-200">
-                <div className="flex gap-2 items-start">
-                  <BellOff size={16} className="text-red-500 shrink-0 mt-0.5" aria-hidden />
-                  <p className="text-xs text-red-700 font-medium">Notifications bloquées (Réglages → Safari).</p>
+              <div className="mx-2 mb-3 rounded-xl bg-gourmand-bg px-3 py-2">
+                <div className="flex gap-2 items-center">
+                  <BellOff size={14} className="text-gourmand-biscuit shrink-0" aria-hidden />
+                  <p className="text-xs text-gourmand-biscuit font-medium">Rappels désactivés. Réactivez-les dans Réglages › Notifications de l’iPhone.</p>
                 </div>
               </div>
             )}
 
             <div className="px-2 space-y-3">
               {filtered.length === 0 && (
-                <div className="text-center py-16 text-gourmand-biscuit">
+                <div className="flex flex-col items-center py-16 text-center text-gourmand-biscuit">
                   <Package size={40} className="mx-auto mb-3 opacity-30" aria-hidden />
-                  <p className="text-sm font-medium">Aucune commande</p>
-                  <p className="text-xs opacity-60 mt-1">+ pour ajouter</p>
+                  <p className="text-sm font-medium">Aucune commande pour le moment</p>
+                  <button type="button" onClick={openNewCommandForm} className="gourmand-btn-primary-compact mt-4 px-5">
+                    Nouvelle commande
+                  </button>
                 </div>
               )}
 
+              {groups.map(group => (
+              <section key={group.label} aria-label={group.label} className="space-y-3">
+                <h2 className={`pl-1 pt-1 text-xs font-bold uppercase tracking-widest ${group.label === 'En retard' ? 'text-red-600' : 'text-gourmand-cocoa/60'}`}>{group.label} · {group.items.length}</h2>
               <AnimatePresence initial={false}>
-                {filtered.map(cmd => {
+                {group.items.map(cmd => {
                   const badge = urgencyBadge(cmd.deliveryDate, cmd.status);
                   const pieces = totalPieces(cmd.items);
                   const prod = producedPieces(cmd.items);
@@ -825,32 +874,25 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                         <div className="flex-1 min-w-0 overflow-hidden">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                             <span className="font-bold text-sm truncate max-w-full">{cmd.clientName}</span>
+                            {cmd.customerType === 'pro' && (
+                              <span className="gourmand-chip shrink-0 bg-gourmand-chocolate text-white">Pro</span>
+                            )}
+                            {cmd.status !== 'pending' && (
                             <span
                               className={`gourmand-chip shrink-0 ${
-                                cmd.customerType === 'pro'
-                                  ? 'bg-gourmand-chocolate text-white'
-                                  : 'bg-gourmand-bg text-gourmand-biscuit border border-gourmand-border'
-                              }`}
-                            >
-                              {cmd.customerType === 'pro' ? 'Pro' : 'Particulier'}
-                            </span>
-                            {badge && <span className={`gourmand-chip shrink-0 ${badge.cls}`}>{badge.label}</span>}
-                            <span
-                              className={`gourmand-chip shrink-0 ${
-                                cmd.status === 'pending'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : cmd.status === 'ready'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-emerald-100 text-emerald-700'
+                                cmd.status === 'ready'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-emerald-100 text-emerald-700'
                               }`}
                             >
                               {STATUS_LABEL[cmd.status]}
                             </span>
+                            )}
                           </div>
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gourmand-biscuit">
                             <span className="inline-flex items-center gap-1 shrink-0">
                               <Clock size={10} aria-hidden />
-                              {formatDate(cmd.deliveryDate)}
+                              {new Date(cmd.deliveryDate + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                             </span>
                             <span className="tabular-nums shrink-0">
                               {pieces} pièce{pieces > 1 ? 's' : ''}
@@ -874,6 +916,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                   );
                 })}
               </AnimatePresence>
+              </section>
+              ))}
             </div>
           </motion.div>
         )}
@@ -893,7 +937,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-bold tabular-nums text-gourmand-chocolate leading-tight">
                   {Math.max(0, orderedKitchen - remainingKitchen)}
-                  <span className="text-gourmand-biscuit text-sm font-semibold"> / {orderedKitchen}</span>
+                  <span className="text-gourmand-biscuit text-sm font-semibold"> / {orderedKitchen} desserts faits</span>
                 </p>
                 {orderedKitchen > 0 && (
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gourmand-bg" role="progressbar" aria-valuenow={kitchenPct} aria-valuemin={0} aria-valuemax={100}>
@@ -1054,15 +1098,21 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
               </div>
 
               <div>
+                <FormLabel>Client</FormLabel>
+                <div className="mt-1">
+                  <FilterChipRow
+                    options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
+                    value={editing.customerType}
+                    onChange={v => setEditing(prev => ({ ...prev, customerType: v }))}
+                    aria-label="Type de client"
+                  />
+                </div>
+              </div>
+
+
+              <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-gourmand-biscuit">Desserts</span>
-                  <button
-                    type="button"
-                    onClick={() => addItem()}
-                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gourmand-chocolate border border-gourmand-border bg-white active:bg-gourmand-bg cursor-pointer min-h-11"
-                  >
-                    <Plus size={16} strokeWidth={2.25} /> Ligne
-                  </button>
+                  <FormLabel>Desserts commandés</FormLabel>
                 </div>
                 <div className="space-y-2">
                   {editing.items.map((item, idx) => (
@@ -1114,41 +1164,73 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="min-w-0">
-                  <FormLabel>Commandé le</FormLabel>
-                  <input
-                    type="date"
-                    className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
-                    value={editing.orderDate}
-                    onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <FormLabel>Livraison le</FormLabel>
-                  <input
-                    type="date"
-                    className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
-                    value={editing.deliveryDate}
-                    onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
-                  />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => addItem()}
+                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-gourmand-border bg-white text-sm font-semibold text-gourmand-chocolate active:bg-gourmand-bg"
+                >
+                  <Plus size={16} strokeWidth={2.25} /> Ajouter un dessert
+                </button>
               </div>
 
               <div>
-                <FormLabel>Type client</FormLabel>
-                <div className="mt-1">
-                  <FilterChipRow
-                    options={CUSTOMER_TYPE_VALIDATE_OPTIONS}
-                    value={editing.customerType}
-                    onChange={v => setEditing(prev => ({ ...prev, customerType: v }))}
-                    aria-label="Type de client"
-                  />
+                <FormLabel>Livraison le</FormLabel>
+                <div className="mb-2 mt-1 flex gap-2">
+                  {[['Aujourd’hui', 0], ['Demain', 1], ['Dans 2 jours', 2]].map(([label, n]) => {
+                    const iso = (() => { const d = new Date(); d.setDate(d.getDate() + (n as number)); return d.toLocaleDateString('sv-SE'); })();
+                    const on = editing.deliveryDate === iso;
+                    return (
+                      <button
+                        key={label as string}
+                        type="button"
+                        onClick={() => setEditing(prev => ({ ...prev, deliveryDate: iso }))}
+                        className={`min-h-11 flex-1 rounded-xl border px-2 text-sm font-semibold transition-colors ${on ? 'border-gourmand-chocolate bg-gourmand-chocolate text-white' : 'border-gourmand-border bg-white text-gourmand-cocoa'}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
+                <input
+                  type="date"
+                  className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
+                  value={editing.deliveryDate}
+                  onChange={e => setEditing(prev => ({ ...prev, deliveryDate: e.target.value }))}
+                />
               </div>
 
+              <div>
+                <FormLabel>Notes</FormLabel>
+                <textarea
+                  className="gourmand-input w-full resize-none min-h-[80px] text-base"
+                  rows={2}
+                  placeholder="Allergies, adresse, personnalisation…"
+                  value={editing.notes}
+                  onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setFormMoreOpen(o => !o)}
+                aria-expanded={formMoreOpen}
+                className="flex min-h-11 w-full items-center justify-between rounded-xl px-1 text-sm font-semibold text-gourmand-biscuit"
+              >
+                Plus d’options (rappels, date de commande)
+                <ChevronDown size={18} className={`transition-transform ${formMoreOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {formMoreOpen && (
+                <div className="space-y-5">
+                  <div className="min-w-0">
+                    <FormLabel>Commandé le</FormLabel>
+                    <input
+                      type="date"
+                      className="gourmand-input w-full max-w-full min-w-0 px-3 text-base"
+                      value={editing.orderDate}
+                      onChange={e => setEditing(prev => ({ ...prev, orderDate: e.target.value }))}
+                    />
+                  </div>
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Bell size={16} className="text-gourmand-biscuit shrink-0" aria-hidden />
@@ -1182,16 +1264,8 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                 </div>
               </div>
 
-              <div>
-                <FormLabel>Notes</FormLabel>
-                <textarea
-                  className="gourmand-input w-full resize-none min-h-[100px] text-base"
-                  rows={3}
-                  placeholder="Allergies, adresse, personnalisation…"
-                  value={editing.notes}
-                  onChange={e => setEditing(prev => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
+                </div>
+              )}
 
               <button
                 type="button"
@@ -1486,7 +1560,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
         {deleteTarget && (
           <ConfirmDialog
             title="Supprimer cette commande ?"
-            message={`La fiche commande de ${deleteTarget.clientName} sera supprimée de Ordres. Les ventes déjà enregistrées en compta (tickets) ne sont pas supprimées ni modifiées.`}
+            message={`La fiche commande de ${deleteTarget.clientName} sera supprimée. Les ventes déjà enregistrées restent dans « Ventes ».`}
             onConfirm={confirmDelete}
             onCancel={() => setDeleteTarget(null)}
           />
@@ -1498,7 +1572,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
           <Modal title="Marquer comme livrée ?" onClose={() => !converting && setDeliverTarget(null)}>
             <div className="p-5 space-y-5">
               <p className="text-sm text-gourmand-cocoa/75 font-medium leading-relaxed">
-                Enregistrer cette commande comme vente dans le Dashboard ?
+                Ajouter cette commande aux ventes ?
               </p>
               <div className="bg-gourmand-bg rounded-xl p-3 space-y-1.5">
                 {mergeCommandeItems(deliverTarget.items).map((item, i) => (
@@ -1514,7 +1588,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                 disabled={converting}
                 className="gourmand-btn-primary-compact w-full cursor-pointer disabled:cursor-not-allowed"
               >
-                {converting ? 'Enregistrement…' : 'Enregistrer + Livrer'}
+                {converting ? 'Enregistrement…' : 'Livrer et ajouter aux ventes'}
               </button>
               <button
                 type="button"
@@ -1522,7 +1596,7 @@ export const CommandesScreen: React.FC<Props> = ({ commandes, desserts, ingredie
                 disabled={converting}
                 className="w-full rounded-lg border border-gourmand-border bg-white py-2.5 text-xs font-semibold text-gourmand-cocoa active:bg-gourmand-bg disabled:opacity-40 transition-colors cursor-pointer disabled:cursor-not-allowed"
               >
-                Livrer uniquement (sans vente)
+                Livrer sans l’ajouter aux ventes
               </button>
             </div>
           </Modal>

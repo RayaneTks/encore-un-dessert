@@ -1,50 +1,53 @@
-# Encore 1 Dessert - Management & Costing 🍩
+# Encore 1 Dessert — Gestion d’une pâtisserie
 
-Une application ultra-premium de gestion de coûts de revient et de pilotage financier, développée sur mesure pour les métiers de la pâtisserie et de la restauration. Pensée en priorité pour les environnements mobiles et d'une fluidité parfaite grâce à un design "Quiet Luxury". 
+Application métier conçue pour une pâtisserie artisanale : calcul des coûts de fabrication, préparation des commandes et suivi des ventes. L’interface privilégie l’usage sur téléphone et peut être installée comme application web progressive (PWA).
 
-## 🚀 Fonctionnalités Clés
+L’application est destinée à un usage interne ; le caractère public du dépôt ne donne pas accès aux données métier.
 
-- **Pilotage Financier Actif** : Un tableau de bord comptable complet (Dashboard) pour suivre le chiffre d'affaires, le bénéfice NET et l'évolution globale des marges.
-- **Formulation Dynamique** : Modifiez un grammage dans une fiche technique et consultez son impact instantané sur la marge grâce au calculateur de coût direct ancré en temps réel.
-- **Gestion Pâtissière Modulaire** : Référencez vos matières premières (Beurre, Farine...) et créez des bases semi-finies (Pâte sucrée, praliné) pour les assembler dans vos fiches produits finaux.
-- **Données Sécurisées (Cloud)** : Synchronisation continue et automatique grâce à une architecture de données relationnelle via **Supabase**. Finie la perte de données liées au navigateur !
-- **Commandes (Ordres)** : prise de commande, suivi **En attente / Prête / Livrée**, rappels locaux, passage en vente comptable à la livraison. La liste **Ordres** masque les commandes **livrées** dès le **lendemain (J+1)** de leur date de livraison enregistrée (elles restent en base et côté **Compta** si encaissées).
-- **Compta (historique des ventes)** : enregistrements **figés** au moment de la vente (prix, lots, légendes) ; une suppression de fiche en Ordres **ne supprime pas** l’historique comptable. Voir `CLAUDE.md` pour le détail technique.
-- **Design "Quiet Luxury"** : Interface épurée, ultra-contrastée, axée sur les typographies modernes afin de favoriser la lecture des chiffres et la rapidité d'exécution.
+## Fonctionnalités
 
-## 🛠️ Stack Technique
+- Gestion des ingrédients, des préparations et des desserts.
+- Calcul des coûts et recalcul lors de la modification du prix d’un ingrédient.
+- Mise à l’échelle des recettes et organisation de la production.
+- Suivi des commandes et de leur livraison.
+- Enregistrement des ventes avec conservation des prix au moment de la vente.
 
-- **Frontend** : React 19 + Vite + TypeScript
-- **Styling** : Tailwind CSS v4 (avec support fluide v4)
-- **Base de données & Backend** : Supabase (PostgreSQL + API)
-- **Déploiement** : Vercel
-- **Animations** : Framer Motion
-- **Icônes** : Lucide React
+## Technologies
 
-## 📦 Installation & Démarrage
+React 19 · TypeScript · Vite · Tailwind CSS 4 · Motion · Supabase (PostgreSQL).
 
-1. Clonez ce dépôt.
-2. Installez les dépendances :
-   ```bash
-   npm install
-   ```
-3. Configurez vos clés **Supabase** dans le fichier `.env` à la racine :
-   ```env
-   VITE_SUPABASE_URL=votre_url_supabase
-   VITE_SUPABASE_ANON_KEY=votre_cle_anon
-   ```
-   *(Si le projet est relié via Vercel, utilisez `vercel env pull` et assurez-vous d'avoir exporté les clés).*
-4. Lancez le serveur localement :
-   ```bash
-   npm run dev
-   ```
+## Installation
 
-## 🎨 L'esthétique "Quiet Luxury"
+```bash
+git clone https://github.com/RayaneTks/encore-un-dessert.git
+cd encore-un-dessert
+npm ci
+cp .env.example .env
+npm run dev
+```
 
-L'interface tranche avec les standards saturés :  
-- **Stone / Neutral 50 & 900** : Les teintes de fond et de textes maximisent la clarté (AAA WCAG) sans heurter la rétine.
-- **Discrétion Visuelle** : Bords délicatement arrondis (`Rounded-xl`), ombres organiques subtiles et absence d'animations cartoonesques.
-- **Focus Métier** : Rien n'est plus grand ou gras que le chiffre le plus important à l'écran. 
+Renseigner `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` avec les valeurs d’un projet Supabase dédié au développement. Utiliser l’URL indiquée par Vite dans le terminal.
 
----
-*Développé avec exigence pour Encore 1 Dessert.*
+Les évolutions SQL versionnées sont dans [`supabase/migrations/`](supabase/migrations/). Pour une nouvelle base, vérifier également le schéma attendu par [`src/lib/db.ts`](src/lib/db.ts) ; les migrations présentes ne remplacent pas nécessairement une initialisation complète.
+
+## Commandes
+
+```bash
+npm run lint     # Vérifier les types TypeScript
+npm run build    # Vérifier les types et compiler
+npm run preview  # Prévisualiser la version compilée
+```
+
+## Organisation
+
+| Chemin | Rôle |
+|---|---|
+| `src/screens/` | Écrans métier : caisse, atelier, commandes et ventes. |
+| `src/components/` | Navigation, formulaires et composants partagés. |
+| `src/lib/` | Calculs, règles métier et accès aux données. |
+| `src/types/` | Modèles TypeScript. |
+| `public/` | Manifestes, icônes et service worker de la PWA. |
+
+## Documentation
+
+Consulter [`CLAUDE.md`](CLAUDE.md) pour l’architecture, les règles de calcul et la conservation de l’historique des ventes.
